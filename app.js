@@ -169,8 +169,23 @@ function buildFeed() {
   const scored = available.map(a => ({ act: a, score: scorActivity(a) }));
   scored.sort((a,b) => b.score - a.score);
   const snoozed = available.filter(a => state.snooze.includes(a.id) && !isCompletedToday(a.id));
-  const rest = scored.filter(s => !state.snooze.includes(s.act.id)).map(s => s.act).slice(0, 12);
-  const feed = [...snoozed, ...rest].slice(0, 14);
+
+  // Ensure coach diversity: pick top from each coach, then fill remaining
+  const byCoach = {};
+  scored.forEach(s => {
+    if (!state.snooze.includes(s.act.id)) {
+      if (!byCoach[s.act.coach]) byCoach[s.act.coach] = [];
+      byCoach[s.act.coach].push(s.act);
+    }
+  });
+  const diverse = [];
+  Object.values(byCoach).forEach(acts => {
+    if (acts.length) diverse.push(acts[0]);
+  });
+  const diverseIds = diverse.map(a => a.id);
+  const rest = scored.filter(s => !state.snooze.includes(s.act.id) && !diverseIds.includes(s.act.id)).map(s => s.act).slice(0, 12 - diverse.length);
+
+  const feed = [...snoozed, ...diverse, ...rest].slice(0, 14);
   state.feedIds = feed.map(a => a.id);
   feed.forEach(a => { initHistory(a.id); state.history[a.id].shown++; });
   save();
@@ -256,6 +271,7 @@ function updateCatBars() {
     { key:'deen',     emoji:'🕌', name:'Deen' },
     { key:'learning', emoji:'📚', name:'Learning' },
     { key:'career',   emoji:'💼', name:'Career' },
+    { key:'tech',     emoji:'💻', name:'Tech' },
     { key:'family',   emoji:'👨‍👩‍👧', name:'Family' },
     { key:'money',    emoji:'💰', name:'Finance' },
     { key:'mental',   emoji:'🧘', name:'Mental' },
@@ -563,13 +579,14 @@ $(document).on('click', '.post-menu-item[data-action="fav"]', function(e) {
   if (state.favourites.includes(id)) {
     state.favourites = state.favourites.filter(f => f !== id);
     showToast('💔 Removed from favourites', 'info');
+    $(`.post-card[data-id="${id}"]`).removeClass('is-favourite').find('.fav-badge').remove();
   } else {
     state.favourites.push(id);
     showToast('❤️ Added to favourites!', 'info');
+    $(`.post-card[data-id="${id}"]`).addClass('is-favourite').find('.post-stats').append('<span class="stat-item fav-badge">❤️ Favourite</span>');
   }
   save();
   $('.post-menu-dropdown').remove();
-  refreshFeed();
 });
 
 $(document).on('click', '.post-menu-item[data-action="block"]', function(e) {
