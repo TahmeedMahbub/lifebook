@@ -2,6 +2,7 @@
 // LIFEBOOK - SHARED APPLICATION SCRIPT
 // ═══════════════════════════════════════════════════
 
+const VERSION = '1.14';
 // ─── THEME ───
 const THEME_KEY = 'lb_theme';
 const THEME_LABELS = { light: 'Light', dark: 'Dark', system: 'System' };
@@ -961,19 +962,23 @@ $(document).ready(function() {
     setupBackToRefreshExit();
 
     const slot = getTimeSlot();
-    const greetings = {
-      morning: '🌅 Good morning! Great day to grow.',
-      office:  '💻 Office hours — learn something today!',
-      afternoon: '☀️ Afternoon energy — let\'s go!',
-      evening: '🌆 Evening check-in. How\'d your day go?',
-      night:   '🌙 Wind down and reflect. You\'ve earned it.',
-    };
+      const name = localStorage.getItem(LS.name) || 'Learner';
+      const greetings = {
+        morning:   `🌅 Good morning, ${name}. A fresh chapter begins today.`,
+        office:    `💼 Welcome back, ${name}. Small actions create big results.`,
+        afternoon: `☀️ Energetic afternoon, ${name}. You're doing great.`,
+        evening:   `🌆 Evening, ${name}. Time to reflect on today's wins.`,
+        night:     `🌙 Rest well, ${name}. Tomorrow brings new opportunities.`,
+      };
     setTimeout(() => showToast(greetings[slot] || '✨ Welcome back!', 'info', 3000), 600);
   }
 
   // Settings page only
   if (document.getElementById('settings-activities-count')) {
     document.getElementById('settings-activities-count').textContent = ACTIVITIES.length + ' activities';
+  }
+  if (document.getElementById('settings-version')) {
+    document.getElementById('settings-version').textContent = 'v' + VERSION;
   }
 
   // Reminders watcher (runs on every page so reminders stay in sync)
