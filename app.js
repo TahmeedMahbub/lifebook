@@ -2,7 +2,7 @@
 // LIFEBOOK - SHARED APPLICATION SCRIPT
 // ═══════════════════════════════════════════════════
 
-const VERSION = '1.15';
+const VERSION = '1.16';
 // ─── THEME ───
 const THEME_KEY = 'lb_theme';
 const THEME_LABELS = { light: 'Light', dark: 'Dark', system: 'System' };
@@ -682,10 +682,10 @@ function renderQueue() {
   if (state.pinned.length <= 1) {
     $wrapper.removeClass('collapsed');
   } else {
-    if (!$wrapper.data('user-expanded')) {
-      $wrapper.addClass('collapsed');
-    }
+    $wrapper.addClass('collapsed');
   }
+  $wrapper.data('user-expanded', false);
+  $('#queue-show-more').text('Show more');
 }
 
 // Show more / collapse toggle
