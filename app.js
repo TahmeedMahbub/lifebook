@@ -195,15 +195,40 @@ function getStreak() {
   return streak;
 }
 
+function renderLevelBanner() {
+  const slot = document.getElementById('level-banner-slot');
+  if (!slot) return;
+  const name = localStorage.getItem(LS.name) || 'Learner';
+  const lv = getLevel(state.xp);
+  const lvIdx = LEVELS.indexOf(lv);
+  const nextLv = LEVELS[lvIdx + 1] || lv;
+  const pct = Math.min(100, Math.round(((state.xp - lv.min) / (lv.max - lv.min)) * 100));
+  const nextText = nextLv === lv ? '✨ Max Level' : nextLv.name;
+  slot.innerHTML = `
+    <div class="level-banner">
+      <div class="level-label">${name}'s Progress</div>
+      <div class="level-name-row">
+        <div class="level-name">${lv.name}</div>
+        <div class="level-next"><b>Next: </b>${nextText}</div>
+      </div>
+      <div class="xp-bar-wrap">
+        <div class="xp-bar-fill" style="width:${pct}%"></div>
+      </div>
+      <div class="xp-info">
+        <span>${state.xp} XP</span>
+        <span>Target: ${lv.max} XP</span>
+      </div>
+    </div>`;
+}
+
 function updateLevelUI() {
   const lv = getLevel(state.xp);
+  const lvIdx = LEVELS.indexOf(lv);
+  const nextLv = LEVELS[lvIdx + 1] || lv;
   const pct = Math.min(100, Math.round(((state.xp - lv.min) / (lv.max - lv.min)) * 100));
   const streak = getStreak();
 
-  $('#level-name, #prog-level-name').text(lv.name);
-  $('#xp-bar-fill, #prog-xp-bar').css('width', pct + '%');
-  $('#xp-current-label, #prog-xp-label').text(state.xp + ' XP');
-  $('#xp-next-label').text('Next: ' + lv.max + ' XP');
+  renderLevelBanner();
   $('#topbar-xp').text(state.xp + ' XP');
   $('#topbar-streak').text(streak);
   $('#prog-level-num').text('Level ' + lv.num);
@@ -506,6 +531,7 @@ $(document).on('click', '#name-save-btn', function() {
   if (name) {
     localStorage.setItem(LS.name, name);
     $('#settings-name').text(name);
+    renderLevelBanner();
     showToast('👤 Name updated!', 'info');
   }
   $('#name-modal').removeClass('open');
@@ -820,6 +846,105 @@ function setupBackToRefreshExit() {
   });
 }
 
+// ─── INFINITE SCROLL ───
+function setupInfiniteScroll() {
+  const fc = document.getElementById('feed-container');
+  if (!fc) return;
+  let loading = false;
+
+  fc.addEventListener('scroll', function() {
+    if (loading) return;
+    if (fc.scrollTop + fc.clientHeight >= fc.scrollHeight - 200) {
+      loading = true;
+      loadMorePosts();
+      setTimeout(() => { loading = false; }, 300);
+    }
+  });
+}
+
+function loadMorePosts() {
+  const $feed = $('#feed-posts');
+  if (!$feed.length) return;
+
+  // Pick random activities for infinite feed
+  const pool = ACTIVITIES.filter(a => !state.pinned.includes(a.id));
+  const shuffled = pool.sort(() => Math.random() - 0.5).slice(0, 5);
+  const offset = $feed.children().length;
+
+  shuffled.forEach((act, idx) => {
+    const coach = COACHES[act.coach];
+    initHistory(act.id);
+    const h = state.history[act.id];
+    const done = isCompletedToday(act.id);
+    const snoozed = state.snooze.includes(act.id);
+    const slotMeta = getTimeSlot() === 'morning' ? '🌅 Morning pick' : getTimeSlot() === 'office' ? '💻 Work hours' : getTimeSlot() === 'evening' ? '🌆 Evening boost' : getTimeSlot() === 'night' ? '🌙 Night wind-down' : '☀️ Afternoon energy';
+
+    const cardHtml = `
+    <div class="post-card ${done?'completed':''} ${snoozed&&!done?'snoozed':''}" data-id="${act.id}" style="animation-delay:${(offset+idx)*0.07}s">
+      <div class="post-header">
+        <div class="coach-avatar" style="background:${coach.bg}">
+          <span style="font-size:20px">${coach.emoji}</span>
+          ${!done ? '<div class="online-dot"></div>' : ''}
+        </div>
+        <div class="coach-info">
+          <div class="coach-name">${coach.name}</div>
+          <div class="coach-meta">${slotMeta} · Just now</div>
+        </div>
+        <span class="category-badge" style="background:${coach.badge};color:${coach.badgeTxt}">${coach.label}</span>
+      </div>
+      <div class="post-body">
+        <div class="activity-title">${act.title}</div>
+        <div class="activity-advice">${act.advice}</div>
+        <div class="post-meta-row">
+          <span class="meta-chip xp">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#F59E0B"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+            +${act.xp} XP
+          </span>
+          <span class="meta-chip duration">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            ${act.dur}
+          </span>
+          ${snoozed ? '<span class="meta-chip" style="background:#FEF3C7;color:#92400E">⏰ Snoozed</span>' : ''}
+        </div>
+        ${done ? `<div class="completed-stamp">✅ Completed today · +${h.xpEarned} XP earned</div>` : `
+        <div class="post-actions">
+          <button class="action-btn" data-action="start" data-id="${act.id}" data-xp="${act.xp}" data-coach="${act.coach}">
+            <span class="action-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg></span>
+            <span>Start</span>
+          </button>
+          <button class="action-btn ${snoozed?'active':''}" data-action="soon" data-id="${act.id}">
+            <span class="action-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg></span>
+            <span>Soon</span>
+          </button>
+          <button class="action-btn ${state.reminders[act.id]?'active':''}" data-action="remind" data-id="${act.id}">
+            <span class="action-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 16v-5a6 6 0 10-12 0v5l-2 2h16l-2-2z"/><path d="M10 20a2 2 0 004 0"/></svg></span>
+            <span>Remind</span>
+          </button>
+        </div>`}
+      </div>
+      <div class="post-stats">
+        <span class="stat-item">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+          ${h.shown} shown
+        </span>
+        <span class="stat-item" style="color:var(--success)">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><polyline points="20 6 9 17 4 12"/></svg>
+          ${h.completed} done
+        </span>
+        <span class="stat-item" style="color:var(--danger)">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          ${h.missed} missed
+        </span>
+        <span class="stat-item" style="color:var(--gold)">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#F59E0B" style="width:11px;height:11px"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+          ${h.xpEarned} XP
+        </span>
+      </div>
+    </div>`;
+    $feed.append(cardHtml);
+  });
+}
+
 // ─── INIT ───
 $(document).ready(function() {
   load();
@@ -832,6 +957,7 @@ $(document).ready(function() {
     renderFeed(feed);
     renderQueue();
     setupPullToRefresh();
+    setupInfiniteScroll();
     setupBackToRefreshExit();
 
     const slot = getTimeSlot();

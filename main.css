@@ -212,11 +212,24 @@ h1,h2,h3,h4,h5,h6,.fw-bold,.fw-semibold {
   text-transform: uppercase;
 }
 
+.level-banner .level-name-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 2px 0 8px;
+}
+
 .level-banner .level-name {
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 18px;
   font-weight: 800;
-  margin: 2px 0 8px;
+}
+
+.level-banner .level-next {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.85;
 }
 
 .level-banner .xp-bar-wrap {
