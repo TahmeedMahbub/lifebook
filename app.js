@@ -2,7 +2,7 @@
 // LIFEBOOK - SHARED APPLICATION SCRIPT
 // ═══════════════════════════════════════════════════
 
-const VERSION = '1.1.0';
+const VERSION = '1.1.9';
 // ─── THEME ───
 const THEME_KEY = 'lb_theme';
 const THEME_LABELS = { light: 'Light', dark: 'Dark', system: 'System' };
@@ -365,7 +365,7 @@ function renderFeed(activities) {
       <div class="post-body">
         <div class="activity-title">${act.title}</div>
         <div class="activity-advice">${act.advice}</div>
-        <img class="post-image" src="https://placehold.co/400x300/e2e8f0/64748b?text=LifeBook" alt="" loading="lazy">
+        <img class="post-image" src="https://placehold.co/400x300/e2e8f0/64748b?text=LifeBook+${encodeURIComponent(coach.label)}%0A+${encodeURIComponent(act.title)}" alt="" loading="lazy">
         <div class="post-meta-row">
           <span class="meta-chip xp">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#F59E0B"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
@@ -801,7 +801,7 @@ function renderQueue() {
       <div class="post-body">
         <div class="activity-title">${act.title}</div>
         <div class="activity-advice">${act.advice}</div>
-        <img class="post-image" src="https://placehold.co/400x300/e2e8f0/64748b?text=LifeBook" alt="" loading="lazy">
+        <img class="post-image" src="https://placehold.co/400x300/e2e8f0/64748b?text=LifeBook+${encodeURIComponent(coach.label)}%0A+${encodeURIComponent(act.title)}" alt="" loading="lazy">
         <div class="post-meta-row">
           <span class="meta-chip xp">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#F59E0B"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
@@ -1168,7 +1168,7 @@ function loadMorePosts() {
       <div class="post-body">
         <div class="activity-title">${act.title}</div>
         <div class="activity-advice">${act.advice}</div>
-        <img class="post-image" src="https://placehold.co/400x300/e2e8f0/64748b?text=LifeBook" alt="" loading="lazy">
+        <img class="post-image" src="https://placehold.co/400x300/e2e8f0/64748b?text=LifeBook+${encodeURIComponent(coach.label)}%0A+${encodeURIComponent(act.title)}" alt="" loading="lazy">
         <div class="post-meta-row">
           <span class="meta-chip xp">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#F59E0B"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
