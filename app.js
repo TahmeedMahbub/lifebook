@@ -2,7 +2,7 @@
 // LIFEBOOK - SHARED APPLICATION SCRIPT
 // ═══════════════════════════════════════════════════
 
-const VERSION = '1.0.19';
+const VERSION = '1.0.21';
 // ─── THEME ───
 const THEME_KEY = 'lb_theme';
 const THEME_LABELS = { light: 'Light', dark: 'Dark', system: 'System' };
@@ -648,9 +648,9 @@ $(document).on('click', '.nav-item[data-page="search"]', function(e) {
   showToast('🔍 Search coming soon!', 'info');
 });
 
-$(document).on('click', '.nav-item[data-page="add"]', function(e) {
+$(document).on('click', '.nav-item[data-page="notifications"]', function(e) {
   e.preventDefault();
-  showToast('✏️ Custom activities coming soon!', 'info');
+  showToast('🔔 Notifications coming soon!', 'info');
 });
 
 // ─── QUEUE (Pinned Posts) ───
