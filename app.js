@@ -2,7 +2,7 @@
 // LIFEBOOK - SHARED APPLICATION SCRIPT
 // ═══════════════════════════════════════════════════
 
-const VERSION = '1.14';
+const VERSION = '1.15';
 // ─── THEME ───
 const THEME_KEY = 'lb_theme';
 const THEME_LABELS = { light: 'Light', dark: 'Dark', system: 'System' };
@@ -719,7 +719,6 @@ function scrollToTopAndRefresh(showSpinner) {
       setTimeout(() => {
         refreshFeed();
         $ind.removeClass('refreshing').css('height', '0');
-        showToast('✨ Feed refreshed', 'info');
       }, 500);
     } else {
       refreshFeed();
@@ -762,7 +761,6 @@ function setupPullToRefresh() {
       ind.style.height = '0px';
       setTimeout(() => { ind.style.transition = ''; }, 250);
       refreshing = false;
-      showToast('✨ Feed refreshed', 'info');
     }, 650);
   }
 
