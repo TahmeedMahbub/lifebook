@@ -917,3 +917,139 @@ html[data-theme="dark"] .modal-overlay { background: rgba(0,0,0,0.7); }
 /* Theme picker check mark */
 .theme-option .check { color: var(--primary); font-weight: 800; opacity: 0; }
 .theme-option.active .check { opacity: 1; }
+
+/* ─── POST THREE-DOT MENU ─── */
+.post-menu-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 50%;
+  line-height: 1;
+  /* margin-left: auto; */
+  transition: background 0.15s;
+}
+.post-menu-btn:hover { background: var(--border); }
+
+.post-menu-dropdown {
+  position: absolute;
+  right: 14px;
+  top: 44px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+  z-index: 100;
+  min-width: 190px;
+  overflow: hidden;
+  animation: fadeSlide 0.15s ease both;
+}
+
+.post-menu-item {
+  padding: 11px 16px;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.post-menu-item:hover { background: var(--bg); }
+.post-menu-item-danger { color: var(--danger); }
+
+.post-header { position: relative; }
+
+/* ─── FAVOURITE BADGE ─── */
+.fav-badge { color: #D97706 !important; font-weight: 600; }
+.post-card.is-favourite { border-left: 3px solid #F59E0B; }
+
+/* ─── SETTINGS LIST PANELS ─── */
+.settings-list-panel {
+  padding: 0 16px 12px;
+}
+.settings-list-empty {
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 20px 0;
+}
+.settings-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+.settings-list-item-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+.settings-list-item-emoji {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.settings-list-item-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.settings-list-item-meta {
+  font-size: 11px;
+  color: var(--muted);
+}
+.settings-list-item-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.settings-list-item-btn:hover { background: var(--bg); }
+
+/* Dark mode for menu & settings list */
+html[data-theme="dark"] .post-menu-dropdown { background: #242526; border-color: #3A3B3C; box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+html[data-theme="dark"] .post-menu-item:hover { background: #3A3B3C; }
+html[data-theme="dark"] .settings-list-item { background: var(--surface); border-color: var(--border); }
+html[data-theme="dark"] .settings-list-item-btn { border-color: #3A3B3C; color: var(--text); }
+html[data-theme="dark"] .settings-list-item-btn:hover { background: #3A3B3C; }
+
+/* ─── CONTENT PAGE (back button / title) ─── */
+.topbar-back {
+  display: flex;
+  align-items: center;
+  color: var(--primary);
+  text-decoration: none;
+  padding: 4px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+.topbar-back:hover { background: var(--border); }
+
+.topbar-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  flex: 1;
+  text-align: center;
+  margin-right: 28px;
+}
+
+#content-page {
+  padding: 68px 16px 80px;
+}

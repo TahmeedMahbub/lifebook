@@ -2,7 +2,7 @@
 // LIFEBOOK - SHARED APPLICATION SCRIPT
 // ═══════════════════════════════════════════════════
 
-const VERSION = '1.16';
+const VERSION = '1.17';
 // ─── THEME ───
 const THEME_KEY = 'lb_theme';
 const THEME_LABELS = { light: 'Light', dark: 'Dark', system: 'System' };
@@ -77,7 +77,7 @@ function getLevel(xp) {
 const LS = {
   xp: 'lb_xp', catXp: 'lb_catXp', history: 'lb_history', stats: 'lb_stats',
   streaks: 'lb_streaks', reminders: 'lb_reminders', snooze: 'lb_snooze', lastFeed: 'lb_lastFeed',
-  pinned: 'lb_pinned', name: 'lb_name',
+  pinned: 'lb_pinned', name: 'lb_name', blocked: 'lb_blocked', favourites: 'lb_favourites',
 };
 
 // ─── STATE ───
@@ -85,6 +85,7 @@ let state = {
   xp: 0,
   catXp: { health:0, deen:0, learning:0, family:0, career:0, money:0, future:0, mental:0, skill:0, biz:0 },
   history: {}, streaks: [], reminders: {}, snooze: [], feedIds: [], pinned: [],
+  blocked: [], favourites: [],
 };
 
 function save() {
@@ -97,6 +98,8 @@ function save() {
     localStorage.setItem(LS.snooze,    JSON.stringify(state.snooze));
     localStorage.setItem(LS.lastFeed,  JSON.stringify(state.feedIds));
     localStorage.setItem(LS.pinned,    JSON.stringify(state.pinned));
+    localStorage.setItem(LS.blocked,   JSON.stringify(state.blocked));
+    localStorage.setItem(LS.favourites,JSON.stringify(state.favourites));
   } catch(e) { console.warn('LS save error', e); }
 }
 
@@ -110,6 +113,8 @@ function load() {
     state.snooze    = JSON.parse(localStorage.getItem(LS.snooze))    || [];
     state.feedIds   = JSON.parse(localStorage.getItem(LS.lastFeed))  || [];
     state.pinned    = JSON.parse(localStorage.getItem(LS.pinned))    || [];
+    state.blocked   = JSON.parse(localStorage.getItem(LS.blocked))   || [];
+    state.favourites= JSON.parse(localStorage.getItem(LS.favourites))|| [];
   } catch(e) { state = { xp:0, catXp:{health:0,deen:0,learning:0,family:0,career:0,money:0,future:0,mental:0,skill:0,biz:0}, history:{}, streaks:[], reminders:{}, snooze:[], feedIds:[] }; }
 }
 
@@ -144,6 +149,8 @@ function scorActivity(act) {
   let score = 100;
   if (act.tags.includes(slot) || act.tags.includes('anytime')) score += 60;
   if (h.completedDate === today()) score -= 500;
+  if (state.blocked.includes(act.id)) score -= 9999;
+  if (state.favourites.includes(act.id)) score += 80;
   score -= Math.min(h.shown * 3, 30);
   if (h.shown > 2 && h.completed === 0) score += 20;
   score -= h.snoozeCount * 8;
@@ -158,9 +165,10 @@ function buildFeed() {
   Object.entries(state.reminders).forEach(([id, ts]) => {
     if (ts <= now) { state.snooze.push(id); delete state.reminders[id]; }
   });
-  const scored = ACTIVITIES.map(a => ({ act: a, score: scorActivity(a) }));
+  const available = ACTIVITIES.filter(a => !state.blocked.includes(a.id));
+  const scored = available.map(a => ({ act: a, score: scorActivity(a) }));
   scored.sort((a,b) => b.score - a.score);
-  const snoozed = ACTIVITIES.filter(a => state.snooze.includes(a.id) && !isCompletedToday(a.id));
+  const snoozed = available.filter(a => state.snooze.includes(a.id) && !isCompletedToday(a.id));
   const rest = scored.filter(s => !state.snooze.includes(s.act.id)).map(s => s.act).slice(0, 12);
   const feed = [...snoozed, ...rest].slice(0, 14);
   state.feedIds = feed.map(a => a.id);
@@ -295,7 +303,7 @@ function renderFeed(activities) {
   if (!$feed.length) return;
   $feed.empty();
   // Exclude pinned items from main feed (they're in the queue)
-  const filtered = activities.filter(a => !state.pinned.includes(a.id));
+  const filtered = activities.filter(a => !state.pinned.includes(a.id) && !state.blocked.includes(a.id));
   filtered.forEach((act, idx) => {
     const coach = COACHES[act.coach];
     const h = state.history[act.id] || { shown:0, completed:0, missed:0, xpEarned:0, snoozeCount:0 };
@@ -303,8 +311,10 @@ function renderFeed(activities) {
     const snoozed = state.snooze.includes(act.id);
     const slotMeta = getTimeSlot() === 'morning' ? '🌅 Morning pick' : getTimeSlot() === 'office' ? '💻 Work hours' : getTimeSlot() === 'evening' ? '🌆 Evening boost' : getTimeSlot() === 'night' ? '🌙 Night wind-down' : '☀️ Afternoon energy';
 
+    const isFav = state.favourites.includes(act.id);
+
     const cardHtml = `
-    <div class="post-card ${done?'completed':''} ${snoozed&&!done?'snoozed':''}" data-id="${act.id}" style="animation-delay:${idx*0.07}s">
+    <div class="post-card ${done?'completed':''} ${snoozed&&!done?'snoozed':''} ${isFav?'is-favourite':''}" data-id="${act.id}" style="animation-delay:${idx*0.07}s">
       <div class="post-header">
         <div class="coach-avatar" style="background:${coach.bg}">
           <span style="font-size:20px">${coach.emoji}</span>
@@ -315,6 +325,7 @@ function renderFeed(activities) {
           <div class="coach-meta">${slotMeta} · Just now</div>
         </div>
         <span class="category-badge" style="background:${coach.badge};color:${coach.badgeTxt}">${coach.label}</span>
+        <button class="post-menu-btn" data-id="${act.id}" aria-label="More options">⋮</button>
       </div>
       <div class="post-body">
         <div class="activity-title">${act.title}</div>
@@ -364,6 +375,7 @@ function renderFeed(activities) {
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#F59E0B" style="width:11px;height:11px"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
           ${h.xpEarned} XP
         </span>
+        ${isFav ? '<span class="stat-item fav-badge">⭐ Favourite</span>' : ''}
       </div>
     </div>`;
     $feed.append(cardHtml);
@@ -501,6 +513,58 @@ $(document).on('click', '#remind-modal', function(e) {
   if ($(e.target).is('#remind-modal')) $(this).removeClass('open');
 });
 
+// ─── POST THREE-DOT MENU ───
+$(document).on('click', '.post-menu-btn', function(e) {
+  e.stopPropagation();
+  $('.post-menu-dropdown').remove();
+  const id = $(this).data('id');
+  const isFav = state.favourites.includes(id);
+  const $btn = $(this);
+  const dropdown = `
+    <div class="post-menu-dropdown" data-id="${id}">
+      <div class="post-menu-item" data-action="fav">
+        <span>${isFav ? '💔 Remove from Favourites' : '⭐ Add to Favourites'}</span>
+      </div>
+      <div class="post-menu-item post-menu-item-danger" data-action="block">
+        <span>🚫 Don't show again</span>
+      </div>
+    </div>`;
+  $btn.closest('.post-header').append(dropdown);
+});
+
+$(document).on('click', '.post-menu-item[data-action="fav"]', function(e) {
+  e.stopPropagation();
+  const id = $(this).closest('.post-menu-dropdown').data('id');
+  if (state.favourites.includes(id)) {
+    state.favourites = state.favourites.filter(f => f !== id);
+    showToast('💔 Removed from favourites', 'info');
+  } else {
+    state.favourites.push(id);
+    showToast('⭐ Added to favourites!', 'info');
+  }
+  save();
+  $('.post-menu-dropdown').remove();
+  refreshFeed();
+});
+
+$(document).on('click', '.post-menu-item[data-action="block"]', function(e) {
+  e.stopPropagation();
+  const id = $(this).closest('.post-menu-dropdown').data('id');
+  if (!state.blocked.includes(id)) state.blocked.push(id);
+  state.favourites = state.favourites.filter(f => f !== id);
+  state.pinned = state.pinned.filter(p => p !== id);
+  save();
+  $('.post-menu-dropdown').remove();
+  showToast('🚫 Post hidden. Undo in Settings.', 'warn');
+  $(`.post-card[data-id="${id}"]`).slideUp(200, function() { $(this).remove(); });
+  renderQueue();
+});
+
+// Close dropdown on click elsewhere
+$(document).on('click', function() {
+  $('.post-menu-dropdown').remove();
+});
+
 // ─── THEME PICKER ───
 function refreshThemeOptions() {
   const cur = getStoredTheme();
@@ -626,6 +690,7 @@ function renderQueue() {
           <div class="coach-meta">${slotMeta} · Queued</div>
         </div>
         <span class="category-badge" style="background:${coach.badge};color:${coach.badgeTxt}">${coach.label}</span>
+        <button class="post-menu-btn" data-id="${act.id}" aria-label="More options">⋮</button>
       </div>
       <div class="post-body">
         <div class="activity-title">${act.title}</div>
@@ -811,6 +876,70 @@ $(document).on('click', '#btn-reset', function() {
   }
 });
 
+// ─── FAVOURITES & BLOCKED CONTENT PAGE ───
+function renderContentPage() {
+  const params = new URLSearchParams(window.location.search);
+  const type = params.get('type');
+  if (!type) return;
+
+  const $title = $('#content-page-title');
+  const $container = $('#content-items');
+  const $empty = $('#content-empty');
+  if (!$container.length) return;
+
+  $title.text(type === 'fav' ? '⭐ Favourite Posts' : '🚫 Blocked Posts');
+  $empty.text(type === 'fav' ? 'No favourite posts yet' : 'No blocked posts');
+
+  const list = type === 'fav' ? state.favourites : state.blocked;
+  $container.empty();
+
+  if (!list.length) {
+    $empty.show();
+    return;
+  }
+  $empty.hide();
+
+  list.forEach(id => {
+    const act = ACTIVITIES.find(a => a.id === id);
+    if (!act) return;
+    const coach = COACHES[act.coach];
+    const h = state.history[id] || { shown:0, completed:0, missed:0, xpEarned:0 };
+    const actionLabel = type === 'fav' ? '💔 Remove' : '✅ Unblock';
+    $container.append(`
+      <div class="settings-list-item" data-id="${id}" data-type="${type}">
+        <div class="settings-list-item-info">
+          <span class="settings-list-item-emoji">${coach.emoji}</span>
+          <div>
+            <div class="settings-list-item-title">${act.title}</div>
+            <div class="settings-list-item-meta">${coach.label} · ${h.completed} done · ${h.missed} missed · ${h.xpEarned} XP</div>
+          </div>
+        </div>
+        <button class="settings-list-item-btn" data-id="${id}" data-type="${type}">${actionLabel}</button>
+      </div>
+    `);
+  });
+}
+
+$(document).on('click', '.settings-list-item-btn', function() {
+  const id = $(this).data('id');
+  const type = $(this).data('type');
+  if (type === 'fav') {
+    state.favourites = state.favourites.filter(f => f !== id);
+    showToast('💔 Removed from favourites', 'info');
+  } else {
+    state.blocked = state.blocked.filter(b => b !== id);
+    showToast('✅ Post unblocked! It will appear in your feed again.', 'info');
+  }
+  save();
+  $(this).closest('.settings-list-item').slideUp(200, function() {
+    $(this).remove();
+    // Show empty state if no items left
+    if (!$('#content-items').children().length) {
+      $('#content-empty').show();
+    }
+  });
+});
+
 // ─── BACK-TO-REFRESH / DOUBLE-BACK-TO-EXIT (Home page only) ───
 // First back press: refresh feed + show toast. Second back press within 3s: exit app.
 function setupBackToRefreshExit() {
@@ -866,7 +995,7 @@ function loadMorePosts() {
   if (!$feed.length) return;
 
   // Pick random activities for infinite feed
-  const pool = ACTIVITIES.filter(a => !state.pinned.includes(a.id));
+  const pool = ACTIVITIES.filter(a => !state.pinned.includes(a.id) && !state.blocked.includes(a.id));
   const shuffled = pool.sort(() => Math.random() - 0.5).slice(0, 5);
   const offset = $feed.children().length;
 
@@ -876,10 +1005,11 @@ function loadMorePosts() {
     const h = state.history[act.id];
     const done = isCompletedToday(act.id);
     const snoozed = state.snooze.includes(act.id);
+    const isFav = state.favourites.includes(act.id);
     const slotMeta = getTimeSlot() === 'morning' ? '🌅 Morning pick' : getTimeSlot() === 'office' ? '💻 Work hours' : getTimeSlot() === 'evening' ? '🌆 Evening boost' : getTimeSlot() === 'night' ? '🌙 Night wind-down' : '☀️ Afternoon energy';
 
     const cardHtml = `
-    <div class="post-card ${done?'completed':''} ${snoozed&&!done?'snoozed':''}" data-id="${act.id}" style="animation-delay:${(offset+idx)*0.07}s">
+    <div class="post-card ${done?'completed':''} ${snoozed&&!done?'snoozed':''} ${isFav?'is-favourite':''}" data-id="${act.id}" style="animation-delay:${(offset+idx)*0.07}s">
       <div class="post-header">
         <div class="coach-avatar" style="background:${coach.bg}">
           <span style="font-size:20px">${coach.emoji}</span>
@@ -890,6 +1020,7 @@ function loadMorePosts() {
           <div class="coach-meta">${slotMeta} · Just now</div>
         </div>
         <span class="category-badge" style="background:${coach.badge};color:${coach.badgeTxt}">${coach.label}</span>
+        <button class="post-menu-btn" data-id="${act.id}" aria-label="More options">⋮</button>
       </div>
       <div class="post-body">
         <div class="activity-title">${act.title}</div>
@@ -938,6 +1069,7 @@ function loadMorePosts() {
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#F59E0B" style="width:11px;height:11px"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
           ${h.xpEarned} XP
         </span>
+        ${isFav ? '<span class="stat-item fav-badge">⭐ Favourite</span>' : ''}
       </div>
     </div>`;
     $feed.append(cardHtml);
@@ -977,6 +1109,17 @@ $(document).ready(function() {
   }
   if (document.getElementById('settings-version')) {
     document.getElementById('settings-version').textContent = 'v' + VERSION;
+  }
+  if (document.getElementById('settings-fav-count')) {
+    document.getElementById('settings-fav-count').textContent = state.favourites.length + ' ›';
+  }
+  if (document.getElementById('settings-blocked-count')) {
+    document.getElementById('settings-blocked-count').textContent = state.blocked.length + ' ›';
+  }
+
+  // Content page (favourites/blocked)
+  if ($('#content-page').length) {
+    renderContentPage();
   }
 
   // Reminders watcher (runs on every page so reminders stay in sync)
