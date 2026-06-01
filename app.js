@@ -2,7 +2,7 @@
 // LIFEBOOK - SHARED APPLICATION SCRIPT
 // ═══════════════════════════════════════════════════
 
-const VERSION = '1.0.18';
+const VERSION = '1.0.19';
 // ─── THEME ───
 const THEME_KEY = 'lb_theme';
 const THEME_LABELS = { light: 'Light', dark: 'Dark', system: 'System' };
@@ -887,10 +887,18 @@ function renderContentPage() {
   const $empty = $('#content-empty');
   if (!$container.length) return;
 
-  $title.text(type === 'fav' ? '⭐ Favourite Posts' : '🚫 Blocked Posts');
-  $empty.text(type === 'fav' ? 'No favourite posts yet' : 'No blocked posts');
+  const titles = { fav: '⭐ Favourite Posts', blocked: '🚫 Blocked Posts', done: '✅ Today\'s Done', soon: '⏳ Soon', remind: '🔔 Remind Me Later' };
+  const emptyTexts = { fav: 'No favourite posts yet', blocked: 'No blocked posts', done: 'No completed posts today', soon: 'No snoozed posts', remind: 'No reminders set' };
+  $title.text(titles[type] || 'Posts');
+  $empty.text(emptyTexts[type] || 'No posts here yet');
 
-  const list = type === 'fav' ? state.favourites : state.blocked;
+  let list = [];
+  if (type === 'fav') list = state.favourites;
+  else if (type === 'blocked') list = state.blocked;
+  else if (type === 'done') list = Object.keys(state.history).filter(id => isCompletedToday(id));
+  else if (type === 'soon') list = [...state.snooze];
+  else if (type === 'remind') list = Object.keys(state.reminders);
+
   $container.empty();
 
   if (!list.length) {
@@ -904,7 +912,12 @@ function renderContentPage() {
     if (!act) return;
     const coach = COACHES[act.coach];
     const h = state.history[id] || { shown:0, completed:0, missed:0, xpEarned:0 };
-    const actionLabel = type === 'fav' ? '💔 Remove' : '✅ Unblock';
+    let actionLabel = '';
+    if (type === 'fav') actionLabel = '💔 Remove';
+    else if (type === 'blocked') actionLabel = '✅ Unblock';
+    else if (type === 'done') actionLabel = '';
+    else if (type === 'soon') actionLabel = '❌ Remove';
+    else if (type === 'remind') actionLabel = '❌ Cancel';
     $container.append(`
       <div class="settings-list-item" data-id="${id}" data-type="${type}">
         <div class="settings-list-item-info">
@@ -914,7 +927,7 @@ function renderContentPage() {
             <div class="settings-list-item-meta">${coach.label} · ${h.completed} done · ${h.missed} missed · ${h.xpEarned} XP</div>
           </div>
         </div>
-        <button class="settings-list-item-btn" data-id="${id}" data-type="${type}">${actionLabel}</button>
+        ${actionLabel ? `<button class="settings-list-item-btn" data-id="${id}" data-type="${type}">${actionLabel}</button>` : ''}
       </div>
     `);
   });
@@ -926,14 +939,19 @@ $(document).on('click', '.settings-list-item-btn', function() {
   if (type === 'fav') {
     state.favourites = state.favourites.filter(f => f !== id);
     showToast('💔 Removed from favourites', 'info');
-  } else {
+  } else if (type === 'blocked') {
     state.blocked = state.blocked.filter(b => b !== id);
     showToast('✅ Post unblocked! It will appear in your feed again.', 'info');
+  } else if (type === 'soon') {
+    state.snooze = state.snooze.filter(s => s !== id);
+    showToast('❌ Removed from soon list', 'info');
+  } else if (type === 'remind') {
+    delete state.reminders[id];
+    showToast('❌ Reminder cancelled', 'info');
   }
   save();
   $(this).closest('.settings-list-item').slideUp(200, function() {
     $(this).remove();
-    // Show empty state if no items left
     if (!$('#content-items').children().length) {
       $('#content-empty').show();
     }
@@ -1115,6 +1133,15 @@ $(document).ready(function() {
   }
   if (document.getElementById('settings-blocked-count')) {
     document.getElementById('settings-blocked-count').textContent = state.blocked.length + ' ›';
+  }
+  if (document.getElementById('settings-done-count')) {
+    document.getElementById('settings-done-count').textContent = Object.keys(state.history).filter(id => isCompletedToday(id)).length + ' ›';
+  }
+  if (document.getElementById('settings-soon-count')) {
+    document.getElementById('settings-soon-count').textContent = state.snooze.length + ' ›';
+  }
+  if (document.getElementById('settings-remind-count')) {
+    document.getElementById('settings-remind-count').textContent = Object.keys(state.reminders).length + ' ›';
   }
 
   // Content page (favourites/blocked)
