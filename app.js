@@ -150,7 +150,7 @@ function scorActivity(act) {
   if (act.tags.includes(slot) || act.tags.includes('anytime')) score += 60;
   if (h.completedDate === today()) score -= 500;
   if (state.blocked.includes(act.id)) score -= 9999;
-  if (state.favourites.includes(act.id)) score += 80;
+  if (state.favourites.includes(act.id)) score -= 9000;
   score -= Math.min(h.shown * 3, 30);
   if (h.shown > 2 && h.completed === 0) score += 20;
   score -= h.snoozeCount * 8;
@@ -165,7 +165,7 @@ function buildFeed() {
   Object.entries(state.reminders).forEach(([id, ts]) => {
     if (ts <= now) { state.snooze.push(id); delete state.reminders[id]; }
   });
-  const available = ACTIVITIES.filter(a => !state.blocked.includes(a.id));
+  const available = ACTIVITIES.filter(a => !state.blocked.includes(a.id) && !state.favourites.includes(a.id));
   const scored = available.map(a => ({ act: a, score: scorActivity(a) }));
   scored.sort((a,b) => b.score - a.score);
   const snoozed = available.filter(a => state.snooze.includes(a.id) && !isCompletedToday(a.id));
@@ -375,7 +375,7 @@ function renderFeed(activities) {
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#F59E0B" style="width:11px;height:11px"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
           ${h.xpEarned} XP
         </span>
-        ${isFav ? '<span class="stat-item fav-badge">⭐ Favourite</span>' : ''}
+        ${isFav ? '<span class="stat-item fav-badge">❤️ Favourite</span>' : ''}
       </div>
     </div>`;
     $feed.append(cardHtml);
@@ -523,7 +523,7 @@ $(document).on('click', '.post-menu-btn', function(e) {
   const dropdown = `
     <div class="post-menu-dropdown" data-id="${id}">
       <div class="post-menu-item" data-action="fav">
-        <span>${isFav ? '💔 Remove from Favourites' : '⭐ Add to Favourites'}</span>
+        <span>${isFav ? '💔 Remove from Favourites' : '❤️ Add to Favourites'}</span>
       </div>
       <div class="post-menu-item post-menu-item-danger" data-action="block">
         <span>🚫 Don't show again</span>
@@ -540,7 +540,7 @@ $(document).on('click', '.post-menu-item[data-action="fav"]', function(e) {
     showToast('💔 Removed from favourites', 'info');
   } else {
     state.favourites.push(id);
-    showToast('⭐ Added to favourites!', 'info');
+    showToast('❤️ Added to favourites!', 'info');
   }
   save();
   $('.post-menu-dropdown').remove();
@@ -768,6 +768,7 @@ $(document).on('click', '.queue-show-more:contains("Show less")', function() {
 
 // ─── FEED REFRESH ───
 function refreshFeed() {
+  _postsSinceLastFav = 0;
   const feed = buildFeed();
   renderFeed(feed);
   renderQueue();
@@ -887,7 +888,7 @@ function renderContentPage() {
   const $empty = $('#content-empty');
   if (!$container.length) return;
 
-  const titles = { fav: '⭐ Favourite Posts', blocked: '🚫 Blocked Posts', done: '✅ Today\'s Done', soon: '⏳ Soon', remind: '🔔 Remind Me Later' };
+  const titles = { fav: '❤️ Favourite Posts', blocked: '🚫 Blocked Posts', done: '✅ Today\'s Done', soon: '⏳ Soon', remind: '🔔 Remind Me Later' };
   const emptyTexts = { fav: 'No favourite posts yet', blocked: 'No blocked posts', done: 'No completed posts today', soon: 'No snoozed posts', remind: 'No reminders set' };
   $title.text(titles[type] || 'Posts');
   $empty.text(emptyTexts[type] || 'No posts here yet');
@@ -1008,16 +1009,33 @@ function setupInfiniteScroll() {
   });
 }
 
+let _postsSinceLastFav = 0;
+
 function loadMorePosts() {
   const $feed = $('#feed-posts');
   if (!$feed.length) return;
 
-  // Pick random activities for infinite feed
-  const pool = ACTIVITIES.filter(a => !state.pinned.includes(a.id) && !state.blocked.includes(a.id));
-  const shuffled = pool.sort(() => Math.random() - 0.5).slice(0, 5);
+  // Pick random activities for infinite feed (exclude favourites from normal pool)
+  const pool = ACTIVITIES.filter(a => !state.pinned.includes(a.id) && !state.blocked.includes(a.id) && !state.favourites.includes(a.id));
+  let batch = pool.sort(() => Math.random() - 0.5).slice(0, 5);
   const offset = $feed.children().length;
 
-  shuffled.forEach((act, idx) => {
+  // Inject a favourite post every 10-15 posts
+  _postsSinceLastFav += batch.length;
+  if (_postsSinceLastFav >= 10 + Math.floor(Math.random() * 6) && state.favourites.length) {
+    const favPool = state.favourites.filter(id => !state.blocked.includes(id) && !state.pinned.includes(id));
+    if (favPool.length) {
+      const favId = favPool[Math.floor(Math.random() * favPool.length)];
+      const favAct = ACTIVITIES.find(a => a.id === favId);
+      if (favAct) {
+        const insertAt = 2 + Math.floor(Math.random() * 3);
+        batch.splice(insertAt, 0, favAct);
+        _postsSinceLastFav = 0;
+      }
+    }
+  }
+
+  batch.forEach((act, idx) => {
     const coach = COACHES[act.coach];
     initHistory(act.id);
     const h = state.history[act.id];
@@ -1087,7 +1105,7 @@ function loadMorePosts() {
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#F59E0B" style="width:11px;height:11px"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
           ${h.xpEarned} XP
         </span>
-        ${isFav ? '<span class="stat-item fav-badge">⭐ Favourite</span>' : ''}
+        ${isFav ? '<span class="stat-item fav-badge">❤️ Favourite</span>' : ''}
       </div>
     </div>`;
     $feed.append(cardHtml);
