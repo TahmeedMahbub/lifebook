@@ -76,7 +76,7 @@ function getLevel(xp) {
 const LS = {
   xp: 'lb_xp', catXp: 'lb_catXp', history: 'lb_history', stats: 'lb_stats',
   streaks: 'lb_streaks', reminders: 'lb_reminders', snooze: 'lb_snooze', lastFeed: 'lb_lastFeed',
-  pinned: 'lb_pinned',
+  pinned: 'lb_pinned', name: 'lb_name',
 };
 
 // ─── STATE ───
@@ -484,6 +484,44 @@ function refreshThemeOptions() {
   const lbl = document.getElementById('settings-theme-value');
   if (lbl) lbl.textContent = THEME_LABELS[cur] || 'System';
 }
+
+// ─── DISPLAY NAME ───
+function loadDisplayName() {
+  const n = localStorage.getItem(LS.name) || 'Learner';
+  const el = document.getElementById('settings-name');
+  if (el) el.textContent = n;
+  return n;
+}
+loadDisplayName();
+
+$(document).on('click', '#btn-name', function() {
+  const current = localStorage.getItem(LS.name) || 'Learner';
+  $('#name-input').val(current);
+  $('#name-modal').addClass('open');
+  setTimeout(() => $('#name-input').focus(), 300);
+});
+
+$(document).on('click', '#name-save-btn', function() {
+  const name = $('#name-input').val().trim();
+  if (name) {
+    localStorage.setItem(LS.name, name);
+    $('#settings-name').text(name);
+    showToast('👤 Name updated!', 'info');
+  }
+  $('#name-modal').removeClass('open');
+});
+
+$(document).on('click', '[data-name-cancel]', function() {
+  $('#name-modal').removeClass('open');
+});
+
+$(document).on('click', '#name-modal', function(e) {
+  if ($(e.target).is('#name-modal')) $('#name-modal').removeClass('open');
+});
+
+$(document).on('keydown', '#name-input', function(e) {
+  if (e.key === 'Enter') $('#name-save-btn').click();
+});
 
 $(document).on('click', '#btn-theme', function() {
   refreshThemeOptions();

@@ -27,7 +27,7 @@
   <div id="settings-page">
     <div class="settings-section">
       <div class="settings-section-title">Account</div>
-      <div class="settings-row">
+      <div class="settings-row" id="btn-name" style="cursor:pointer">
         <div class="icon" style="background:#EEF0FF">👤</div>
         <div class="label">Display Name</div>
         <div class="value" id="settings-name">Learner</div>
@@ -95,6 +95,23 @@
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
       <span>Settings</span>
     </a>
+  </div>
+</div>
+
+<!-- NAME MODAL -->
+<div class="modal-overlay" id="name-modal">
+  <div class="bottom-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">👤 Display Name</div>
+    <div style="padding:0 20px 16px">
+      <input type="text" id="name-input" class="form-control" placeholder="Enter your name" maxlength="30" style="font-size:16px;padding:12px 14px;border-radius:12px;border:1.5px solid var(--border);background:var(--card-bg);color:var(--text-primary)">
+    </div>
+    <div class="remind-option" id="name-save-btn" style="justify-content:center;font-weight:600;color:var(--accent)">
+      Save
+    </div>
+    <div class="remind-option" data-name-cancel="1" style="color:var(--danger);margin-top:4px;justify-content:center">
+      Cancel
+    </div>
   </div>
 </div>
 
