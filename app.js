@@ -2,7 +2,7 @@
 // LIFEBOOK - SHARED APPLICATION SCRIPT
 // ═══════════════════════════════════════════════════
 
-const VERSION = '1.0.22';
+const VERSION = '1.1.0';
 // ─── THEME ───
 const THEME_KEY = 'lb_theme';
 const THEME_LABELS = { light: 'Light', dark: 'Dark', system: 'System' };
@@ -644,8 +644,9 @@ $(document).on('click', '.nav-item[data-page="feed"]', function(e) {
 });
 
 $(document).on('click', '.nav-item[data-page="search"]', function(e) {
-  e.preventDefault();
-  showToast('🔍 Search coming soon!', 'info');
+  if (!$('#search-page').length) {
+    window.location.href = 'search.html';
+  }
 });
 
 $(document).on('click', '.nav-item[data-page="notifications"]', function(e) {
