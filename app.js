@@ -480,12 +480,26 @@ $(document).on('click', '.action-btn[data-action="soon"]', function() {
   h.snoozeCount++;
   h.lastAction = 'soon';
   if (!state.snooze.includes(id)) state.snooze.push(id);
-  const msg = h.snoozeCount > 3
-    ? `⚠️ Postponed ${h.snoozeCount}x — small XP penalty building...`
-    : '⏳ Will show again next time!';
-  showToast(msg, 'warn');
+
+  // Deduct XP after 2 snoozes
+  if (h.snoozeCount > 2) {
+    const deduction = Math.min(h.snoozeCount - 2, 5);
+    state.xp = Math.max(0, state.xp - deduction);
+    save();
+    updateLevelUI();
+    showToast(`⚠️ Multiple warning costs ${deduction} XP penalty!`, 'warn');
+  } else {
+    showToast(h.snoozeCount === 1 ? '⏳ Will be reminded again next time!' : '⚠️ Last warning — next postpone costs XP!', 'warn');
+  }
+
   $(this).addClass('active');
   $card.addClass('snoozed').css('opacity', '0.75');
+  // Update penalty chip visually
+  const $metaRow = $card.find('.post-meta-row');
+  $metaRow.find('.penalty-chip').remove();
+  if (h.snoozeCount > 2) {
+    $metaRow.append('<span class="meta-chip penalty-chip" style="background:#FEE2E2;color:#991B1B">-' + Math.min(h.snoozeCount-2, 5) + ' XP penalty</span>');
+  }
   save();
   renderQueue();
 });
