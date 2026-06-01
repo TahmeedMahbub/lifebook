@@ -516,7 +516,7 @@ $(document).on('click', '#remind-modal', function(e) {
 // ─── ASK AI MENTOR ───
 function buildPrompt(act) {
   const coach = COACHES[act.coach];
-  return `In easy english, tell me in short how to improve me in: ${act.title}`;
+  return `In easy english, tell me. I am using a self-improvement app. The app said: ${act.title}. How should I improve myself? The app also gave this advice: ${act.advice}. Please give me specific tips on how to implement this advice in my daily life in short.`;
 }
 
 function askAI(act) {
@@ -536,15 +536,15 @@ $(document).on('click', '.post-menu-btn', function(e) {
   const $btn = $(this);
   const dropdown = `
     <div class="post-menu-dropdown" data-id="${id}">
-      ${act && coach ? `<div class="post-menu-item" data-action="ask-ai">
-        <span>🤖 Ask ${coach.name}</span>
-      </div>` : ''}
       <div class="post-menu-item" data-action="fav">
         <span>${isFav ? '💔 Remove from Favourites' : '❤️ Add to Favourites'}</span>
       </div>
       <div class="post-menu-item post-menu-item-danger" data-action="block">
         <span>🚫 Don't show again</span>
       </div>
+      ${act && coach ? `<div class="post-menu-item" data-action="ask-ai">
+        <span>⚡ Ask AI</span>
+      </div>` : ''}
     </div>`;
   $btn.closest('.post-header').append(dropdown);
 });
