@@ -2,6 +2,7 @@
 // LIFEBOOK - ACTIVITIES DATASET
 // Edit this file to add/remove/modify activities.
 // Format: { id, coach, title, advice, xp, dur, tags }
+// Total XP: 10400
 // ═══════════════════════════════════════════════════
 
 const ACTIVITIES = [
