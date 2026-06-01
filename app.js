@@ -164,6 +164,17 @@ function scorActivity(act) {
 
 function buildFeed() {
   const now = Date.now();
+
+  // Mark previous feed posts as missed if not completed or snoozed
+  if (state.feedIds && state.feedIds.length) {
+    state.feedIds.forEach(id => {
+      if (!isCompletedToday(id) && !state.snooze.includes(id) && !state.pinned.includes(id)) {
+        initHistory(id);
+        state.history[id].missed++;
+      }
+    });
+  }
+
   Object.entries(state.reminders).forEach(([id, ts]) => {
     if (ts <= now) { state.snooze.push(id); delete state.reminders[id]; }
   });
@@ -593,7 +604,35 @@ $(document).on('click', '.post-menu-item[data-action="ask-ai"]', function(e) {
   e.stopPropagation();
   const id = $(this).closest('.post-menu-dropdown').data('id');
   const act = ACTIVITIES.find(a => a.id === id);
-  if (act) askAI(act);
+  if (act) {
+    askAI(act);
+
+    // Auto-complete the post
+    state.pinned = state.pinned.filter(p => p !== id);
+    initHistory(id);
+    const h = state.history[id];
+    const penalty = Math.max(0, (h.snoozeCount - 2) * 1);
+    const earned = Math.max(5, act.xp - penalty);
+    h.completed++;
+    h.xpEarned += earned;
+    h.completedDate = today();
+    h.lastAction = 'done';
+    state.snooze = state.snooze.filter(s => s !== id);
+    delete state.reminders[id];
+    addXP(earned, act.coach);
+
+    const $card = $(`.post-card[data-id="${id}"]`);
+    $card.addClass('completed');
+    $card.find('.post-actions').html(`<div class="completed-stamp">✅ Completed today · +${earned} XP earned</div>`);
+    $card.find('.coach-avatar .online-dot').remove();
+    $card.find('.stat-item:nth-child(2)').html(`<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:11px;height:11px"><polyline points="20 6 9 17 4 12"/></svg> ${h.completed} done`);
+    $card.find('.stat-item:last').html(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#F59E0B" style="width:11px;height:11px"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg> ${h.xpEarned} XP`);
+
+    showToast(`🚀 Redirected to ChatGPT. +${earned} XP earned!`, 'info', 5000);
+    save();
+    updateLevelUI();
+    renderQueue();
+  }
   $('.post-menu-dropdown').remove();
 });
 
