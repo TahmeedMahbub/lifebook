@@ -2,7 +2,7 @@
 // LIFEBOOK - SHARED APPLICATION SCRIPT
 // ═══════════════════════════════════════════════════
 
-const VERSION = '1.0.21';
+const VERSION = '1.0.22';
 // ─── THEME ───
 const THEME_KEY = 'lb_theme';
 const THEME_LABELS = { light: 'Light', dark: 'Dark', system: 'System' };
