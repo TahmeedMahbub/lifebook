@@ -513,15 +513,42 @@ $(document).on('click', '#remind-modal', function(e) {
   if ($(e.target).is('#remind-modal')) $(this).removeClass('open');
 });
 
+// ─── ASK AI MENTOR ───
+let _gptWindow = null;
+
+function buildPrompt(act) {
+  return `In easy english, tell me in short how to improve me in: ${act.title}`;
+}
+
+function askAI(act) {
+  const prompt = buildPrompt(act);
+  navigator.clipboard.writeText(prompt).then(() => {
+    showToast('📋 Prompt copied! Paste in ChatGPT', 'info', 3000);
+  }).catch(() => {
+    showToast('📋 Could not copy prompt', 'warn');
+  });
+  // Reuse existing ChatGPT window or open one
+  if (_gptWindow && !_gptWindow.closed) {
+    _gptWindow.focus();
+  } else {
+    _gptWindow = window.open('https://chatgpt.com/', 'lifebook_gpt');
+  }
+}
+
 // ─── POST THREE-DOT MENU ───
 $(document).on('click', '.post-menu-btn', function(e) {
   e.stopPropagation();
   $('.post-menu-dropdown').remove();
   const id = $(this).data('id');
+  const act = ACTIVITIES.find(a => a.id === id);
+  const coach = act ? COACHES[act.coach] : null;
   const isFav = state.favourites.includes(id);
   const $btn = $(this);
   const dropdown = `
     <div class="post-menu-dropdown" data-id="${id}">
+      ${act && coach ? `<div class="post-menu-item" data-action="ask-ai">
+        <span>🤖 Ask ${coach.name}</span>
+      </div>` : ''}
       <div class="post-menu-item" data-action="fav">
         <span>${isFav ? '💔 Remove from Favourites' : '❤️ Add to Favourites'}</span>
       </div>
@@ -530,6 +557,14 @@ $(document).on('click', '.post-menu-btn', function(e) {
       </div>
     </div>`;
   $btn.closest('.post-header').append(dropdown);
+});
+
+$(document).on('click', '.post-menu-item[data-action="ask-ai"]', function(e) {
+  e.stopPropagation();
+  const id = $(this).closest('.post-menu-dropdown').data('id');
+  const act = ACTIVITIES.find(a => a.id === id);
+  if (act) askAI(act);
+  $('.post-menu-dropdown').remove();
 });
 
 $(document).on('click', '.post-menu-item[data-action="fav"]', function(e) {
