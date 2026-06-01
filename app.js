@@ -514,25 +514,15 @@ $(document).on('click', '#remind-modal', function(e) {
 });
 
 // ─── ASK AI MENTOR ───
-let _gptWindow = null;
-
 function buildPrompt(act) {
+  const coach = COACHES[act.coach];
   return `In easy english, tell me in short how to improve me in: ${act.title}`;
 }
 
 function askAI(act) {
   const prompt = buildPrompt(act);
-  navigator.clipboard.writeText(prompt).then(() => {
-    showToast('📋 Prompt copied! Paste in ChatGPT', 'info', 3000);
-  }).catch(() => {
-    showToast('📋 Could not copy prompt', 'warn');
-  });
-  // Reuse existing ChatGPT window or open one
-  if (_gptWindow && !_gptWindow.closed) {
-    _gptWindow.focus();
-  } else {
-    _gptWindow = window.open('https://chatgpt.com/', 'lifebook_gpt');
-  }
+  const url = 'https://chatgpt.com/?q=' + encodeURIComponent(prompt);
+  window.open(url, 'lifebook_gpt');
 }
 
 // ─── POST THREE-DOT MENU ───
