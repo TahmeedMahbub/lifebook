@@ -85,7 +85,7 @@ let state = {
   xp: 0,
   catXp: { health:0, deen:0, learning:0, family:0, career:0, money:0, future:0, mental:0, skill:0, biz:0 },
   history: {}, streaks: [], reminders: {}, snooze: [], feedIds: [], pinned: [],
-  blocked: [], favourites: [],
+  blocked: [], favourites: [], snoozeTimes: {},
 };
 
 function save() {
@@ -100,6 +100,7 @@ function save() {
     localStorage.setItem(LS.pinned,    JSON.stringify(state.pinned));
     localStorage.setItem(LS.blocked,   JSON.stringify(state.blocked));
     localStorage.setItem(LS.favourites,JSON.stringify(state.favourites));
+    localStorage.setItem('lb_snoozeTimes', JSON.stringify(state.snoozeTimes));
   } catch(e) { console.warn('LS save error', e); }
 }
 
@@ -115,6 +116,7 @@ function load() {
     state.pinned    = JSON.parse(localStorage.getItem(LS.pinned))    || [];
     state.blocked   = JSON.parse(localStorage.getItem(LS.blocked))   || [];
     state.favourites= JSON.parse(localStorage.getItem(LS.favourites))|| [];
+    state.snoozeTimes= JSON.parse(localStorage.getItem('lb_snoozeTimes'))|| {};
   } catch(e) { state = { xp:0, catXp:{health:0,deen:0,learning:0,family:0,career:0,money:0,future:0,mental:0,skill:0,biz:0}, history:{}, streaks:[], reminders:{}, snooze:[], feedIds:[] }; }
 }
 
@@ -168,12 +170,18 @@ function buildFeed() {
   const available = ACTIVITIES.filter(a => !state.blocked.includes(a.id) && !state.favourites.includes(a.id));
   const scored = available.map(a => ({ act: a, score: scorActivity(a) }));
   scored.sort((a,b) => b.score - a.score);
-  const snoozed = available.filter(a => state.snooze.includes(a.id) && !isCompletedToday(a.id));
+  // Only include snoozed posts that have cooled down (10 min)
+  const SNOOZE_COOLDOWN = 10 * 60 * 1000;
+  const snoozedReady = available.filter(a => {
+    if (!state.snooze.includes(a.id) || isCompletedToday(a.id)) return false;
+    const snoozedAt = state.snoozeTimes[a.id] || 0;
+    return (now - snoozedAt) >= SNOOZE_COOLDOWN;
+  });
 
   // Ensure coach diversity: pick top from each coach, then fill remaining
   const byCoach = {};
   scored.forEach(s => {
-    if (!state.snooze.includes(s.act.id)) {
+    if (!state.snooze.includes(s.act.id) || snoozedReady.find(a => a.id === s.act.id)) {
       if (!byCoach[s.act.coach]) byCoach[s.act.coach] = [];
       byCoach[s.act.coach].push(s.act);
     }
@@ -183,9 +191,9 @@ function buildFeed() {
     if (acts.length) diverse.push(acts[0]);
   });
   const diverseIds = diverse.map(a => a.id);
-  const rest = scored.filter(s => !state.snooze.includes(s.act.id) && !diverseIds.includes(s.act.id)).map(s => s.act).slice(0, 12 - diverse.length);
+  const rest = scored.filter(s => (!state.snooze.includes(s.act.id) || snoozedReady.find(a => a.id === s.act.id)) && !diverseIds.includes(s.act.id)).map(s => s.act).slice(0, 12 - diverse.length);
 
-  const feed = [...snoozed, ...diverse, ...rest].slice(0, 14);
+  const feed = [...diverse, ...rest].slice(0, 14);
   state.feedIds = feed.map(a => a.id);
   feed.forEach(a => { initHistory(a.id); state.history[a.id].shown++; });
   save();
@@ -480,6 +488,7 @@ $(document).on('click', '.action-btn[data-action="soon"]', function() {
   h.snoozeCount++;
   h.lastAction = 'soon';
   if (!state.snooze.includes(id)) state.snooze.push(id);
+  state.snoozeTimes[id] = Date.now();
 
   // Deduct XP after 2 snoozes
   if (h.snoozeCount > 2) {
