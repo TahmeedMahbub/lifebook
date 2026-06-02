@@ -9,7 +9,8 @@
 
   // ─── CONFIGURATION ───
   var ONESIGNAL_APP_ID = '4a46d75a-e97f-4b92-bfac-5cf8694c7685';
-  var ONESIGNAL_REST_API_KEY = 'os_v2_app_jjdnowxjp5fzfp5mlt4gstdwqwm5lzcbzrwerhe276qs3g2655hqfcxgmxjdiwgwzfqbxx7byod6mogi6f6aeigv3imksyaeyt53cyy';
+  var ONESIGNAL_REST_API_KEY = 'os_v2_app_jjdnowxjp5fzfp5mlt4gstdwqukcxgunp7zeoge5cvvjy5rykqzjntwlpe6eteyfeiduosruncdhop3rnx44tca67lcl2urj5v23giy';
+//   var ONESIGNAL_REST_API_KEY = 'os_v2_app_jjdnowxjp5fzfp5mlt4gstdwqwm5lzcbzrwerhe276qs3g2655hqfcxgmxjdiwgwzfqbxx7byod6mogi6f6aeigv3imksyaeyt53cyy';
 
   var NOTIF_INTERVAL = 2 * 60 * 1000; // 2 minutes
 
@@ -31,17 +32,27 @@
   function sendPushNotification() {
     var msg = getRandomMessage();
 
-    var payload = {
-      app_id: ONESIGNAL_APP_ID,
-      target_channel: 'push',
-      headings: { en: msg.title },
-      contents: { en: msg.body },
-      included_segments: ['Total Subscriptions'],
-      buttons: [
-        { id: 'done', text: 'Done' },
-        { id: 'snooze', text: '1 min snooze' }
-      ]
-    };
+    // var payload = {
+    //   app_id: ONESIGNAL_APP_ID,
+    //   target_channel: 'push',
+    //   headings: { en: msg.title },
+    //   contents: { en: msg.body },
+    //   included_segments: ['Subscribed Users'],
+    //   buttons: [
+    //     { id: 'done', text: 'Done' },
+    //     { id: 'snooze', text: '1 min snooze' }
+    //   ]
+      // };
+      
+        var payload = {
+            app_id: ONESIGNAL_APP_ID,
+            target_channel: 'push',
+            headings: { en: 'Test' },
+            contents: { en: 'Hello World' },
+            include_subscription_ids: [
+                '4663dc36-133d-4199-841b-d679e86e1f31'
+            ]
+        };
 
     fetch('https://api.onesignal.com/notifications', {
       method: 'POST',
