@@ -1,187 +1,142 @@
 // ═══════════════════════════════════════════════════
-// LIFEBOOK - NATIVE PUSH NOTIFICATION SYSTEM
-// Uses Median.co JavaScript bridge for real Android notifications
-// Tap "Alerts" → instant native push → repeats every 2 min
+// LIFEBOOK - PUSH NOTIFICATION SYSTEM
+// Uses OneSignal REST API to send real push notifications
+// Tap "Alerts" → sends push to THIS device → repeats every 2 min
 // ═══════════════════════════════════════════════════
 
 (function () {
-  const NOTIF_INTERVAL = 2 * 60 * 1000; // 2 minutes
-  const SNOOZE_DELAY = 1 * 60 * 1000;   // 1 minute
+  'use strict';
 
-  const NOTIF_MESSAGES = [
-    { title: '📖 LifeBook Reminder', body: 'Time to check your progress!' },
-    { title: '🎯 Stay on Track', body: 'Have you completed your task?' },
-    { title: '💪 Keep Going!', body: 'Your goals are waiting for you.' },
-    { title: '🔥 Don\'t Break the Streak!', body: 'Open LifeBook and stay consistent.' },
-    { title: '⏰ Quick Check-in', body: 'Take a moment to review your queue.' },
+  // ─── CONFIGURATION (Replace with your actual keys) ───
+  // Find these in OneSignal Dashboard → Settings → Keys & IDs
+  var ONESIGNAL_APP_ID = 'YOUR_ONESIGNAL_APP_ID';       // ← Replace this
+  var ONESIGNAL_REST_API_KEY = 'YOUR_REST_API_KEY';      // ← Replace this
+
+  var NOTIF_INTERVAL = 2 * 60 * 1000; // 2 minutes
+  var SNOOZE_DELAY = 1 * 60 * 1000;   // 1 minute
+
+  var NOTIF_MESSAGES = [
+    { title: 'LifeBook Reminder', body: 'Time to check your progress!' },
+    { title: 'Stay on Track', body: 'Have you completed your task?' },
+    { title: 'Keep Going!', body: 'Your goals are waiting for you.' },
+    { title: 'Don\'t Break the Streak!', body: 'Open LifeBook and stay consistent.' },
+    { title: 'Quick Check-in', body: 'Take a moment to review your queue.' }
   ];
 
-  let intervalId = null;
-  let notifCounter = 0;
+  var intervalId = null;
+  var subscriptionId = null;
 
   function getRandomMessage() {
     return NOTIF_MESSAGES[Math.floor(Math.random() * NOTIF_MESSAGES.length)];
   }
 
-  // ─── Send a NATIVE push notification via Median.co bridge ───
-  function sendNativeNotification(delaySec) {
-    delaySec = delaySec || 0;
-    notifCounter++;
-    const msg = getRandomMessage();
-    const notifId = 1000 + notifCounter;
-
-    // Method 1: Median.co oneSignalSendSelfNotification (preferred)
-    if (window.median && median.onesignal && median.onesignal.sendSelfNotification) {
-      median.onesignal.sendSelfNotification({
-        title: msg.title,
-        message: msg.body,
-        buttons: [
-          { id: 'done', text: 'Done' },
-          { id: 'snooze', text: '1 min snooze' }
-        ]
-      });
-      console.log('[LifeBook] Native notification sent via OneSignal bridge');
+  // ─── Get OneSignal Subscription ID from Median.co bridge ───
+  function getSubscriptionId(callback) {
+    if (subscriptionId) {
+      callback(subscriptionId);
       return;
     }
 
-    // Method 2: Median.co local notifications API
-    if (window.median && median.localNotifications) {
-      median.localNotifications.schedule({
-        id: notifId,
-        title: msg.title,
-        body: msg.body,
-        delay: delaySec,
-        sound: true,
-        buttons: [
-          { id: 'done', text: 'Done' },
-          { id: 'snooze', text: '1 min snooze' }
-        ]
-      });
-      console.log('[LifeBook] Native notification scheduled via localNotifications');
-      return;
-    }
-
-    // Method 3: GoNative legacy bridge (older Median.co versions)
-    if (window.gonative && gonative.localNotifications) {
-      gonative.localNotifications.schedule({
-        id: notifId,
-        title: msg.title,
-        body: msg.body,
-        delay: delaySec,
-        sound: true
-      });
-      console.log('[LifeBook] Native notification sent via GoNative bridge');
-      return;
-    }
-
-    // Method 4: Median URL scheme approach
-    if (window.median) {
-      try {
-        var url = 'median://localNotification/schedule?' +
-          'id=' + notifId +
-          '&title=' + encodeURIComponent(msg.title) +
-          '&body=' + encodeURIComponent(msg.body) +
-          '&delay=' + delaySec;
-        window.location.href = url;
-        console.log('[LifeBook] Native notification via URL scheme');
+    try {
+      // Median.co JS Bridge - get OneSignal info
+      if (window.median && median.onesignal && median.onesignal.onesignalInfo) {
+        median.onesignal.onesignalInfo(function(info) {
+          if (info && info.subscriptionId) {
+            subscriptionId = info.subscriptionId;
+            callback(subscriptionId);
+          } else if (info && info.pushToken) {
+            // Try alternative field
+            subscriptionId = info.oneSignalUserId || info.userId || null;
+            callback(subscriptionId);
+          } else {
+            callback(null);
+          }
+        });
         return;
-      } catch(e) {}
-    }
-
-    // Method 5: Web Notification API fallback (for browser testing only)
-    if ('Notification' in window) {
-      if (Notification.permission === 'granted') {
-        new Notification(msg.title, { body: msg.body, icon: '/icon-192.png', tag: 'lifebook-' + notifId });
-      } else if (Notification.permission === 'default') {
-        Notification.requestPermission().then(function(p) {
-          if (p === 'granted') new Notification(msg.title, { body: msg.body, icon: '/icon-192.png' });
-        });
       }
+
+      // Alternative: gonative bridge (older Median.co)
+      if (window.gonative && gonative.onesignal && gonative.onesignal.onesignalInfo) {
+        gonative.onesignal.onesignalInfo(function(info) {
+          if (info && info.subscriptionId) {
+            subscriptionId = info.subscriptionId;
+          }
+          callback(subscriptionId);
+        });
+        return;
+      }
+    } catch(e) {
+      // Silently fail - don't break the app
     }
 
-    console.log('[LifeBook] Fallback web notification used');
+    // If we can't get it from bridge, check if stored
+    var stored = localStorage.getItem('lb_onesignal_sub_id');
+    if (stored) {
+      subscriptionId = stored;
+      callback(stored);
+      return;
+    }
+
+    callback(null);
   }
 
-  // ─── Schedule repeating notifications using native scheduling ───
-  function scheduleRepeating() {
-    // Try to use native repeat scheduling
-    if (window.median && median.localNotifications && median.localNotifications.scheduleRepeating) {
-      for (var i = 1; i <= 30; i++) { // schedule next 30 (1 hour worth)
-        var msg = getRandomMessage();
-        median.localNotifications.schedule({
-          id: 2000 + i,
-          title: msg.title,
-          body: msg.body,
-          delay: i * 120, // every 2 min (120 sec)
-          sound: true
-        });
+  // ─── Send push notification via OneSignal REST API ───
+  function sendPushNotification() {
+    var msg = getRandomMessage();
+
+    getSubscriptionId(function(subId) {
+      if (!subId) {
+        showToast('⚠️ No subscription ID found. Open app fresh & allow notifications.');
+        return;
       }
-      console.log('[LifeBook] Scheduled 30 native notifications (every 2 min)');
-      return true;
-    }
-    return false;
+
+      // Store for future use
+      localStorage.setItem('lb_onesignal_sub_id', subId);
+
+      var payload = {
+        app_id: ONESIGNAL_APP_ID,
+        target_channel: 'push',
+        include_subscription_ids: [subId],
+        headings: { en: msg.title },
+        contents: { en: msg.body },
+        buttons: [
+          { id: 'done', text: 'Done' },
+          { id: 'snooze', text: '1 min snooze' }
+        ]
+      };
+
+      fetch('https://api.onesignal.com/notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Key ' + ONESIGNAL_REST_API_KEY
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (data.id) {
+          showToast('🔔 Push notification sent!');
+        } else {
+          showToast('⚠️ Failed: ' + (data.errors ? data.errors[0] : 'Unknown error'));
+        }
+      })
+      .catch(function(err) {
+        showToast('⚠️ Network error sending notification');
+      });
+    });
   }
 
-  // ─── Start JS-based interval (backup for when native repeat isn't available) ───
+  // ─── Start repeating every 2 minutes ───
   function startInterval() {
     if (intervalId) return;
-
-    // Try native repeating first
-    var nativeScheduled = scheduleRepeating();
-
-    // Also run JS interval as backup (works while app is in foreground)
-    intervalId = setInterval(function() {
-      sendNativeNotification(0);
-    }, NOTIF_INTERVAL);
-
-    console.log('[LifeBook] Notification interval started (every 2 min)');
+    intervalId = setInterval(sendPushNotification, NOTIF_INTERVAL);
   }
 
   function stopInterval() {
     if (intervalId) {
       clearInterval(intervalId);
       intervalId = null;
-    }
-    // Cancel any scheduled native notifications
-    if (window.median && median.localNotifications && median.localNotifications.cancel) {
-      for (var i = 1; i <= 30; i++) {
-        median.localNotifications.cancel({ id: 2000 + i });
-      }
-    }
-  }
-
-  // ─── Handle notification action callbacks from Median.co ───
-  function setupMedianCallbacks() {
-    // Median.co fires these when user taps notification buttons
-    if (window.median) {
-      // OneSignal notification action handler
-      if (median.onesignal) {
-        median.onesignal.onNotificationAction = function(data) {
-          var action = data.actionId || data.action || data.id || '';
-          if (action === 'snooze') {
-            sendNativeNotification(60); // 1 min later
-            showToast('⏰ Snoozed — reminding in 1 min');
-          } else {
-            showToast('✅ Done!');
-          }
-        };
-        median.onesignal.onNotificationOpened = function() {
-          showToast('✅ Notification opened');
-        };
-      }
-
-      // Local notification action handler
-      if (median.localNotifications) {
-        median.localNotifications.onAction = function(data) {
-          var action = data.actionId || data.action || data.id || '';
-          if (action === 'snooze') {
-            sendNativeNotification(60);
-            showToast('⏰ Snoozed — reminding in 1 min');
-          } else {
-            showToast('✅ Done!');
-          }
-        };
-      }
     }
   }
 
@@ -193,31 +148,56 @@
     toast.className = 'toast-msg';
     toast.textContent = message;
     container.appendChild(toast);
-    setTimeout(function () { toast.remove(); }, 3000);
+    setTimeout(function() { toast.remove(); }, 3000);
   }
 
-  // ─── Intercept Alerts nav tap ───
-  function init() {
-    setupMedianCallbacks();
-
-    document.addEventListener('click', function (e) {
-      var navItem = e.target.closest('[data-page="notifications"]');
-      if (navItem) {
-        e.preventDefault();
-        // Send native notification IMMEDIATELY
-        sendNativeNotification(0);
-        showToast('🔔 Notifications activated!');
-        // Start repeating every 2 minutes
-        startInterval();
+  // ─── Handle notification tap actions (callback from Median.co) ───
+  function setupCallbacks() {
+    try {
+      if (window.median && median.onesignal) {
+        // Store subscription info when available
+        if (median.onesignal.onesignalInfo) {
+          median.onesignal.onesignalInfo(function(info) {
+            if (info && info.subscriptionId) {
+              subscriptionId = info.subscriptionId;
+              localStorage.setItem('lb_onesignal_sub_id', info.subscriptionId);
+            }
+          });
+        }
       }
+    } catch(e) {
+      // Silent - never break the app
+    }
+  }
+
+  // ─── Intercept Alerts nav click ───
+  function init() {
+    setupCallbacks();
+
+    document.addEventListener('click', function(e) {
+      var navItem = e.target.closest('[data-page="notifications"]');
+      if (!navItem) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Send push immediately
+      sendPushNotification();
+      // Start 2-minute repeating cycle
+      startInterval();
     });
   }
 
   // Expose for debugging
   window.LifeBookNotif = {
-    send: function() { sendNativeNotification(0); },
+    send: sendPushNotification,
     start: startInterval,
-    stop: stopInterval
+    stop: stopInterval,
+    setSubId: function(id) {
+      subscriptionId = id;
+      localStorage.setItem('lb_onesignal_sub_id', id);
+      showToast('✅ Subscription ID saved');
+    }
   };
 
   if (document.readyState === 'loading') {
