@@ -9,7 +9,8 @@
 
   // ─── CONFIGURATION ───
   var ONESIGNAL_APP_ID = '4a46d75a-e97f-4b92-bfac-5cf8694c7685';
-  var ONESIGNAL_REST_API_KEY = 'os_v2_app_jjdnowxjp5fzfp5mlt4gstdwqupwjf27mevek5fngfygzx2ejnkubqe5jn2qndaevf6ezaoffodqaau2eu2hblpasptyftqnjh4oaqa';
+  var ONESIGNAL_REST_API_KEY = 'os_v2_app_jjdnowxjp5fzfp5mlt4gstdwqwkztsp5uz3en3v6xmxonvhzbh5cnztgyzxra2tl5auqn5krh6jojqg73yh2o4yaiud2s2ylvgomjay';
+//   var ONESIGNAL_REST_API_KEY = 'os_v2_app_jjdnowxjp5fzfp5mlt4gstdwqupwjf27mevek5fngfygzx2ejnkubqe5jn2qndaevf6ezaoffodqaau2eu2hblpasptyftqnjh4oaqa';
 //   var ONESIGNAL_REST_API_KEY = 'os_v2_app_jjdnowxjp5fzfp5mlt4gstdwqukcxgunp7zeoge5cvvjy5rykqzjntwlpe6eteyfeiduosruncdhop3rnx44tca67lcl2urj5v23giy';
 //   var ONESIGNAL_REST_API_KEY = 'os_v2_app_jjdnowxjp5fzfp5mlt4gstdwqwm5lzcbzrwerhe276qs3g2655hqfcxgmxjdiwgwzfqbxx7byod6mogi6f6aeigv3imksyaeyt53cyy';
 
