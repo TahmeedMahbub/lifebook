@@ -1,10 +1,11 @@
 // ═══════════════════════════════════════════════════
-// LIFEBOOK - NOTIFICATION SYSTEM (OneSignal via Median.co)
+// LIFEBOOK - NOTIFICATION SYSTEM
+// Tap "Alerts" → instant notification → repeats every 2 min
 // ═══════════════════════════════════════════════════
 
 (function () {
   const NOTIF_INTERVAL = 2 * 60 * 1000; // 2 minutes
-  const SNOOZE_DELAY = 1 * 60 * 1000;   // 1 minute snooze
+  const SNOOZE_DELAY = 1 * 60 * 1000;   // 1 minute
 
   const NOTIF_MESSAGES = [
     { title: '📖 LifeBook Reminder', body: 'Time to check your progress!' },
@@ -15,109 +16,83 @@
   ];
 
   let intervalId = null;
+  let bannerEl = null;
 
-  // ─── Get a random notification message ───
   function getRandomMessage() {
     return NOTIF_MESSAGES[Math.floor(Math.random() * NOTIF_MESSAGES.length)];
   }
 
-  // ─── Send notification via Median.co OneSignal bridge ───
-  function sendNotification() {
-    const msg = getRandomMessage();
+  // ─── Create the notification banner element (once) ───
+  function ensureBanner() {
+    if (bannerEl) return;
+    bannerEl = document.createElement('div');
+    bannerEl.id = 'notif-banner';
+    bannerEl.innerHTML = `
+      <div class="notif-banner-content">
+        <div class="notif-banner-icon">🔔</div>
+        <div class="notif-banner-text">
+          <div class="notif-banner-title"></div>
+          <div class="notif-banner-body"></div>
+        </div>
+        <button class="notif-banner-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="notif-banner-actions">
+        <button class="notif-btn notif-btn-done">✅ Done</button>
+        <button class="notif-btn notif-btn-snooze">⏰ 1 min snooze</button>
+      </div>
+    `;
+    document.body.appendChild(bannerEl);
 
-    // Median.co native bridge for OneSignal local notifications
-    if (window.median && median.onesignal) {
-      // Use median's JS bridge to post a notification
-      median.onesignal.postNotification({
-        title: msg.title,
-        body: msg.body,
-        buttons: [
-          { id: 'done', text: 'Done' },
-          { id: 'snooze', text: '1 min snooze' }
-        ]
-      });
-    } else if ('Notification' in window && Notification.permission === 'granted') {
-      // Fallback: Web Notification API (for browser testing)
-      showWebNotification(msg);
-    } else if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission().then(function (perm) {
-        if (perm === 'granted') showWebNotification(msg);
-      });
-    }
-  }
-
-  // ─── Web Notification fallback (for browser testing) ───
-  function showWebNotification(msg) {
-    const notif = new Notification(msg.title, {
-      body: msg.body,
-      icon: '/icon-192.png',
-      actions: [
-        { action: 'done', title: 'Done' },
-        { action: 'snooze', title: '1 min snooze' }
-      ],
-      requireInteraction: true,
-      tag: 'lifebook-reminder'
-    });
-
-    notif.onclick = function () {
-      handleAction('done');
-      notif.close();
-    };
-  }
-
-  // ─── Handle notification button actions ───
-  function handleAction(actionId) {
-    if (actionId === 'done') {
-      console.log('[LifeBook Notif] User tapped Done — dismissed.');
+    // Event listeners
+    bannerEl.querySelector('.notif-banner-close').addEventListener('click', hideBanner);
+    bannerEl.querySelector('.notif-btn-done').addEventListener('click', function () {
+      hideBanner();
       showToast('✅ Marked as done!');
-    } else if (actionId === 'snooze') {
-      console.log('[LifeBook Notif] User tapped Snooze — will remind in 1 min.');
-      showToast('⏰ Snoozed for 1 minute');
-      setTimeout(sendNotification, SNOOZE_DELAY);
+    });
+    bannerEl.querySelector('.notif-btn-snooze').addEventListener('click', function () {
+      hideBanner();
+      showToast('⏰ Snoozed — reminding in 1 min');
+      setTimeout(showNotification, SNOOZE_DELAY);
+    });
+  }
+
+  // ─── Show in-app notification banner ───
+  function showNotification() {
+    ensureBanner();
+    const msg = getRandomMessage();
+    bannerEl.querySelector('.notif-banner-title').textContent = msg.title;
+    bannerEl.querySelector('.notif-banner-body').textContent = msg.body;
+    bannerEl.classList.add('visible');
+
+    // Also vibrate if supported (mobile)
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+
+    // Auto-hide after 30 seconds if no action
+    clearTimeout(bannerEl._autoHide);
+    bannerEl._autoHide = setTimeout(hideBanner, 30000);
+  }
+
+  function hideBanner() {
+    if (bannerEl) {
+      bannerEl.classList.remove('visible');
+      clearTimeout(bannerEl._autoHide);
     }
   }
 
-  // ─── Listen for Median.co OneSignal action events ───
-  function setupMedianListeners() {
-    // Median fires this event when a notification action button is tapped
-    if (window.median && median.onesignal) {
-      median.onesignal.onNotificationAction = function (data) {
-        handleAction(data.actionId || data.action);
-      };
-
-      // Also listen for notification opened (tap on body)
-      median.onesignal.onNotificationOpened = function () {
-        handleAction('done');
-      };
-    }
-
-    // Service Worker message listener (for web fallback)
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.addEventListener('message', function (event) {
-        if (event.data && event.data.type === 'notif-action') {
-          handleAction(event.data.action);
-        }
-      });
-    }
-  }
-
-  // ─── Start the recurring notification timer ───
-  function startNotifications() {
+  // ─── Start repeating every 2 minutes ───
+  function startInterval() {
     if (intervalId) return;
-    intervalId = setInterval(sendNotification, NOTIF_INTERVAL);
-    console.log('[LifeBook Notif] Started — will fire every 2 minutes.');
+    intervalId = setInterval(showNotification, NOTIF_INTERVAL);
   }
 
-  // ─── Stop the recurring notifications ───
-  function stopNotifications() {
+  function stopInterval() {
     if (intervalId) {
       clearInterval(intervalId);
       intervalId = null;
-      console.log('[LifeBook Notif] Stopped.');
     }
   }
 
-  // ─── Toast helper (reuses existing toast container) ───
+  // ─── Toast helper ───
   function showToast(message) {
     const container = document.getElementById('toast-container');
     if (!container) return;
@@ -128,30 +103,27 @@
     setTimeout(function () { toast.remove(); }, 3000);
   }
 
-  // ─── Initialize ───
+  // ─── Intercept Alerts nav tap ───
   function init() {
-    setupMedianListeners();
-
-    // Request permission if using web notifications
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-
-    // Auto-start notifications for testing
-    startNotifications();
-
-    // Send one immediately so you don't have to wait 2 min
-    setTimeout(sendNotification, 3000);
+    document.addEventListener('click', function (e) {
+      const navItem = e.target.closest('[data-page="notifications"]');
+      if (navItem) {
+        e.preventDefault();
+        // Show notification instantly
+        showNotification();
+        // Start the 2-minute repeating cycle
+        startInterval();
+      }
+    });
   }
 
-  // Expose controls globally for debugging
+  // Expose for debugging
   window.LifeBookNotif = {
-    start: startNotifications,
-    stop: stopNotifications,
-    sendNow: sendNotification
+    show: showNotification,
+    start: startInterval,
+    stop: stopInterval
   };
 
-  // Start when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
