@@ -66,6 +66,7 @@ $(document).ready(function() {
     $results.empty();
 
     const results = [];
+    const seenMentors = new Set();
 
     ACTIVITIES.forEach(act => {
       const coach = COACHES[act.coach];
@@ -80,10 +81,39 @@ $(document).ready(function() {
 
       if (!matchTypes.length) return;
 
-      // If no filters active, show all matches; otherwise only show if it matches an active filter
-      if (activeFilters.length && !activeFilters.some(f => matchTypes.includes(f))) return;
+      // When filters are active, only show results that genuinely match the selected filter
+      if (activeFilters.length) {
+        // For "post" filter: only show if title/advice actually contains the query
+        if (activeFilters.includes('post') && !activeFilters.includes('category') && !activeFilters.includes('mentor')) {
+          if (!matchPost) return;
+        }
+        // For "category" filter: only show if category matches
+        if (activeFilters.includes('category') && !activeFilters.includes('post') && !activeFilters.includes('mentor')) {
+          if (!matchCategory) return;
+        }
+        // For "mentor" filter: only show if mentor matches
+        if (activeFilters.includes('mentor') && !activeFilters.includes('post') && !activeFilters.includes('category')) {
+          if (!matchMentor) return;
+        }
+        // General: must match at least one active filter type
+        if (!activeFilters.some(f => matchTypes.includes(f))) return;
+      }
 
-      results.push({ act, coach, matchType: matchTypes[0] });
+      // Determine display type
+      let primaryMatch;
+      if (activeFilters.length) {
+        primaryMatch = activeFilters.find(f => matchTypes.includes(f));
+      } else {
+        primaryMatch = matchTypes[0];
+      }
+
+      // For category/mentor, only show once per coach
+      if (primaryMatch === 'category' || primaryMatch === 'mentor') {
+        if (seenMentors.has(act.coach)) return;
+        seenMentors.add(act.coach);
+      }
+
+      results.push({ act, coach, matchType: primaryMatch });
     });
 
     if (!results.length) {
@@ -93,17 +123,30 @@ $(document).ready(function() {
     $empty.hide();
 
     results.slice(0, 30).forEach(({ act, coach, matchType }) => {
-      const typeLabel = matchType === 'category' ? coach.label : matchType === 'mentor' ? coach.name : 'Post';
-      $results.append(`
-        <a href="index.html" class="search-result-item" data-id="${act.id}">
-          <div class="search-result-emoji" style="background:${coach.bg}">${coach.emoji}</div>
-          <div class="search-result-info">
-            <div class="search-result-title">${act.title}</div>
-            <div class="search-result-meta">${coach.name} · ${coach.label} · ${act.xp} XP</div>
-          </div>
-          <span class="search-result-type">${typeLabel}</span>
-        </a>
-      `);
+      if (matchType === 'category' || matchType === 'mentor') {
+        // Mentor/Category result: show profile, highlighted name, category
+        $results.append(`
+          <a href="index.html" class="search-result-item search-result-mentor" data-id="${act.id}">
+            <div class="search-result-emoji" style="background:${coach.bg}">${coach.emoji}</div>
+            <div class="search-result-info">
+              <div class="search-result-title" style="font-weight:700">${coach.name}</div>
+              <div class="search-result-meta"><span class="search-result-badge" style="background:${coach.badge};color:${coach.badgeTxt}">${coach.label}</span></div>
+            </div>
+          </a>
+        `);
+      } else {
+        // Post result: show full post info
+        $results.append(`
+          <a href="index.html" class="search-result-item" data-id="${act.id}">
+            <div class="search-result-emoji" style="background:${coach.bg}">${coach.emoji}</div>
+            <div class="search-result-info">
+              <div class="search-result-title">${act.title}</div>
+              <div class="search-result-meta">${coach.name} · ${coach.label} · ${act.xp} XP</div>
+            </div>
+            <span class="search-result-type">Post</span>
+          </a>
+        `);
+      }
     });
   }
 
