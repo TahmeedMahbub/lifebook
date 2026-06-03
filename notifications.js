@@ -9,7 +9,7 @@
 
   // ─── CONFIGURATION ───
   var ONESIGNAL_APP_ID = '4a46d75a-e97f-4b92-bfac-5cf8694c7685';
-  var ONESIGNAL_REST_API_KEY = 'os_v2_app_jjdnowxjp5fzfp5mlt4gstdwqwkztsp5uz3en3v6xmxonvhzbh5cnztgyzxra2tl5auqn5krh6jojqg73yh2o4yaiud2s2ylvgomjay';
+  var ONESIGNAL_REST_API_KEY = 'os_v2_app_jjdnowxjp5fzfp5mlt4gstdwqx3qoa2sg67ea54nf45cbjinxmcqgq3t4zdhsoemnyzwt6x5wu5luyacmb7oxfaa5r7qsfvnxeaz6ti';
 //   var ONESIGNAL_REST_API_KEY = 'os_v2_app_jjdnowxjp5fzfp5mlt4gstdwqupwjf27mevek5fngfygzx2ejnkubqe5jn2qndaevf6ezaoffodqaau2eu2hblpasptyftqnjh4oaqa';
 //   var ONESIGNAL_REST_API_KEY = 'os_v2_app_jjdnowxjp5fzfp5mlt4gstdwqukcxgunp7zeoge5cvvjy5rykqzjntwlpe6eteyfeiduosruncdhop3rnx44tca67lcl2urj5v23giy';
 //   var ONESIGNAL_REST_API_KEY = 'os_v2_app_jjdnowxjp5fzfp5mlt4gstdwqwm5lzcbzrwerhe276qs3g2655hqfcxgmxjdiwgwzfqbxx7byod6mogi6f6aeigv3imksyaeyt53cyy';
@@ -49,11 +49,11 @@
         var payload = {
             app_id: ONESIGNAL_APP_ID,
             target_channel: 'push',
-            headings: { en: 'Test' },
-            contents: { en: 'Hello World' },
             include_subscription_ids: [
                 '4663dc36-133d-4199-841b-d679e86e1f31'
-            ]
+            ],
+            headings: { en: '🚀 New Test from phone' },
+            contents: { en: 'From Phone: If you see this, push notifications are working!' }
         };
 
     fetch('https://api.onesignal.com/notifications', {
@@ -72,8 +72,9 @@
         showToast('⚠️ ' + (data.errors ? data.errors[0] : 'Failed'));
       }
     })
-    .catch(function() {
-      showToast('⚠️ Network error');
+    .catch(function(err) {
+      showToast('⚠️ Network error: ' + err.message);
+      console.error('Push notification error:', err);
     });
   }
 
